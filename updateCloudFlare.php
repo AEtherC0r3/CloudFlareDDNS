@@ -10,7 +10,11 @@ $hosts = array(
 );
 
 // Check the calling client has a valid auth key.
-if(empty($_GET['auth']) || (!array_key_exists($_GET['auth'], $hosts))) die;
+if (empty($_GET['auth'])) {
+	die("Authentication required\n");
+} elseif (!array_key_exists($_GET['auth'], $hosts)) {
+	die("Invalid auth key\n");
+}
 
 // Update these values with your own information.
 $apiKey		= "CloudFlareApiKey";				// Your CloudFlare API Key.
@@ -40,7 +44,7 @@ function send_request() {
 	$result = curl_exec($ch);
 	curl_close($ch);
 
-	return $result;
+	return json_decode($result);
 }
 
 // Determine protocol version and set record type.
@@ -59,21 +63,27 @@ $fields = array(
 	'z' => urlencode($myDomain)
 );
 
-$result = send_request();
+$data = send_request();
 
-// Extract the record ID (if it exists) for the subdomain we want to update.
-$rec_exists = False;						// Assume that the record doesn't exist.
-$data = json_decode($result);
-foreach($data->response->recs->objs as $rec){
-	if(($rec->name == $ddnsAddress) && ($rec->type == $type)){
-		$rec_exists = True;				// If this runs, it means that the record exists.
-		$id = $rec->rec_id;
-		$cfIP = $rec->content;				// The IP Cloudflare has for the subdomain.
-		break;
+// Continue if the request succeeded.
+if ($data->result == "success") {
+	// Extract the record ID (if it exists) for the subdomain we want to update.
+	$rec_exists = False;						// Assume that the record doesn't exist.
+	foreach($data->response->recs->objs as $rec){
+		if(($rec->name == $ddnsAddress) && ($rec->type == $type)){
+			$rec_exists = True;				// If this runs, it means that the record exists.
+			$id = $rec->rec_id;
+			$cfIP = $rec->content;				// The IP Cloudflare has for the subdomain.
+			break;
+		}
 	}
+
+// Print error message if the request failed.
+} else {
+	die($data->msg."\n");
 }
 
-// Create a new record if it doesn't exist
+// Create a new record if it doesn't exist.
 if(!$rec_exists){
 	// Build the request to create a new DNS record.
 	// https://www.cloudflare.com/docs/client-api.html#s5.1
@@ -88,7 +98,14 @@ if(!$rec_exists){
 		'ttl' => urlencode ('1')
 	);
 
-	$result = send_request();
+	$data = send_request();
+	
+	// Print success/error message.
+	if ($data->result == "success") {
+		echo $ddnsAddress."/".$type." record successfully created\n";
+	} else {
+		echo $data->msg."\n";
+	}
 	
 // Only update the entry if the IP addresses do not match.
 } elseif($ip != $cfIP){
@@ -107,5 +124,14 @@ if(!$rec_exists){
 		'ttl' => urlencode ('1')
 	);
 
-	$result = send_request();
+	$data = send_request();
+	
+	// Print success/error message.
+	if ($data->result == "success") {
+		echo $ddnsAddress."/".$type." successfully updated to ".$ip."\n";
+	} else {
+		echo $data->msg."\n";
+	}
+} else {
+	echo $ddnsAddress."/".$type." is already up to date\n";
 }
