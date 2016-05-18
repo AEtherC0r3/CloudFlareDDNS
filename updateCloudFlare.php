@@ -34,6 +34,23 @@ $headers = array(
 	"Content-Type: application/json"
 );
 
+// Prints errors and messages and kills the script
+fucntion print_err_msg() {
+	global $data;
+	
+	if (!empty($data->errors)) {
+		echo "Errors:\n";
+		print_r($data->errors);
+		echo "\n";
+	}
+	if (!empty($data->messages)) {
+		echo "Messages:\n";
+		print_r($data->messages);
+		echo "\n";
+	}
+	die();
+}
+
 // Determine protocol version and set record type.
 if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 	$type = 'AAAA';
@@ -45,7 +62,7 @@ if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 // https://api.cloudflare.com/#zone-list-zones
 $url = $baseUrl.'?name='.urlencode($myDomain);
 
-//Send the request
+// Send the request
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_HTTPGET, true);
 curl_setopt($ch, CURLOPT_URL, $url);
@@ -67,17 +84,7 @@ if ($data->success == true) {
 
 // Print error message if the request failed.
 } else {
-	if (!empty($data->errors)) {
-		echo "Errors:\n";
-		print_r($data->errors);
-		echo "\n";
-	}
-	if (!empty($data->messages)) {
-		echo "Messages:\n";
-		print_r($data->messages);
-		echo "\n";
-	}
-	die();
+	print_err_msg();
 }
 
 // Build the request to fetch the record ID.
@@ -86,7 +93,7 @@ $url = $baseUrl.'/'.$zoneID.'dns_records';
 $url .= '?type='.$type;
 $url .= '&name='.urlencode($ddnsAddress);
 
-//Send the request
+// Send the request
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_HTTPGET, true);
 curl_setopt($ch, CURLOPT_URL, $url);
@@ -109,17 +116,7 @@ if ($data->success == true) {
 
 // Print error message if the request failed.
 } else {
-	if (!empty($data->errors)) {
-		echo "Errors:\n";
-		print_r($data->errors);
-		echo "\n";
-	}
-	if (!empty($data->messages)) {
-		echo "Messages:\n";
-		print_r($data->messages);
-		echo "\n";
-	}
-	die();
+	print_err_msg();
 }
 
 // Create a new record if it doesn't exist.
