@@ -64,6 +64,8 @@ if ($data->success == true) {
 	} else {
 		die("Zone ".$myDomain." doesn't exist\n");
 	}
+
+// Print error message if the request failed.
 } else {
 	if (!empty($data->errors)) {
 		echo "Errors:\n";
@@ -80,31 +82,44 @@ if ($data->success == true) {
 
 // Build the request to fetch the record ID.
 // https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
-$fields = array(
-	'a' => urlencode('rec_load_all'),
-	'tkn' => urlencode($apiKey),
-	'email' => urlencode($emailAddress),
-	'z' => urlencode($myDomain)
-);
+$url = $baseUrl.'/'.$zoneID.'dns_records';
+$url .= '?type='.$type;
+$url .= '&name='.urlencode($ddnsAddress);
 
-$data = send_request();
+//Send the request
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_HTTPGET, true);
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$result = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($result);
 
 // Continue if the request succeeded.
-if ($data->result == "success") {
+if ($data->success == true) {
 	// Extract the record ID (if it exists) for the subdomain we want to update.
-	$rec_exists = False;						// Assume that the record doesn't exist.
-	foreach($data->response->recs->objs as $rec){
-		if(($rec->name == $ddnsAddress) && ($rec->type == $type)){
-			$rec_exists = True;				// If this runs, it means that the record exists.
-			$id = $rec->rec_id;
-			$cfIP = $rec->content;				// The IP Cloudflare has for the subdomain.
-			break;
-		}
+	$rec_exists = false;					// Assume that the record doesn't exist.
+	if (!empty($data->result) {
+			$rec_exists = true;			// If this runs, it means that the record exists.
+			$id = = $data->result[0]->id;
+			$cfIP = $data->result[0]->content;	// The IP Cloudflare has for the subdomain.
 	}
 
 // Print error message if the request failed.
 } else {
-	die($data->msg."\n");
+	if (!empty($data->errors)) {
+		echo "Errors:\n";
+		print_r($data->errors);
+		echo "\n";
+	}
+	if (!empty($data->messages)) {
+		echo "Messages:\n";
+		print_r($data->messages);
+		echo "\n";
+	}
+	die();
 }
 
 // Create a new record if it doesn't exist.
