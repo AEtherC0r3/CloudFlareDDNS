@@ -25,27 +25,7 @@ $emailAddress	= "CloudFlareAccountEmailAddress";		// The email address of your C
 $hostname	= $hosts[$_GET['auth']];			// The hostname that will be updated.
 $ddnsAddress	= $hostname.".".$myDomain;			// The fully qualified domain name.
 $ip		= $_SERVER['REMOTE_ADDR'];			// The IP of the client calling the script.
-$baseurl	= 'https://api.cloudflare.com/client/v4/zones';	// The URL for the CloudFlare API.
-
-// Sends request to CloudFlare and returns the response.
-function send_request() {
-	global $url, $fields;
-
-	$fields_string="";
-	foreach($fields as $key=>$value) { $fields_string .= $key.'='.$value.'&'; }
-	rtrim($fields_string, '&');
-
-	// Send the request to the CloudFlare API.
-	$ch = curl_init();
-	curl_setopt($ch,CURLOPT_URL, $url);
-	curl_setopt($ch,CURLOPT_POST, count($fields));
-	curl_setopt($ch,CURLOPT_POSTFIELDS, $fields_string);
-	curl_setopt($ch,CURLOPT_RETURNTRANSFER, true);
-	$result = curl_exec($ch);
-	curl_close($ch);
-
-	return json_decode($result);
-}
+$baseUrl	= 'https://api.cloudflare.com/client/v4/zones';	// The URL for the CloudFlare API.
 
 // Determine protocol version and set record type.
 if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
@@ -54,7 +34,8 @@ if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 	$type = 'A';
 }
 
-// Build the initial request to fetch the record ID.
+
+// Build the request to fetch the record ID.
 // https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
 $fields = array(
 	'a' => urlencode('rec_load_all'),
