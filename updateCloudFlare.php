@@ -130,7 +130,6 @@ if (!$rec_exists) {
 		'type' => urlencode($type),
 		'name' => urlencode($ddnsAddress),
 		'content' => urlencode($ip),
-		'ttl' => urlencode ('1')
 	);
 	$url = $baseUrl;
 	
@@ -160,25 +159,31 @@ if (!$rec_exists) {
 	// Build the request to update the DNS record with our new IP.
 	// https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 	$fields = array(
-		'a' => urlencode('rec_edit'),
-		'tkn' => urlencode($apiKey),
-		'id' => urlencode($id),
-		'email' => urlencode($emailAddress),
-		'z' => urlencode($myDomain),
+		'name' => urlencode($ddnsAddress),
 		'type' => urlencode($type),
-		'name' => urlencode($hostname),
-		'content' => urlencode($ip),
-		'service_mode' => urlencode('0'),
-		'ttl' => urlencode ('1')
+		'content' => urlencode($ip)
 	);
-
-	$data = send_request();
+	$url = $baseUrl.'/'.$id;
 	
+	$fields_string = json_encode($fields);
+
+	// Send the request to the CloudFlare API.
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$result = curl_exec($ch);
+	curl_close($ch);
+
+	$data = json_decode($result);
+
 	// Print success/error message.
-	if ($data->result == "success") {
+	if ($data->success) {
 		echo $ddnsAddress."/".$type." successfully updated to ".$ip."\n";
 	} else {
-		echo $data->msg."\n";
+		print_err_msg();
 	}
 } else {
 	echo $ddnsAddress."/".$type." is already up to date\n";
