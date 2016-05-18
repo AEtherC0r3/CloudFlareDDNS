@@ -35,7 +35,7 @@ $headers = array(
 );
 
 // Prints errors and messages and kills the script
-fucntion print_err_msg() {
+function print_err_msg() {
 	global $data;
 	
 	if (!empty($data->errors)) {
@@ -77,7 +77,7 @@ curl_close($ch);
 $data = json_decode($result);
 
 // Continue if the request succeeded.
-if ($data->success == true) {
+if ($data->success) {
 	// Extract the zone ID (if it exists) and update $baseUrl
 	if (!empty($data->result)) {
 		$zoneID = $data->result[0]->id;
@@ -108,12 +108,12 @@ curl_close($ch);
 $data = json_decode($result);
 
 // Continue if the request succeeded.
-if ($data->success == true) {
+if ($data->success) {
 	// Extract the record ID (if it exists) for the subdomain we want to update.
 	$rec_exists = false;					// Assume that the record doesn't exist.
-	if (!empty($data->result) {
+	if (!empty($data->result)) {
 			$rec_exists = true;			// If this runs, it means that the record exists.
-			$id = = $data->result[0]->id;
+			$id = $data->result[0]->id;
 			$cfIP = $data->result[0]->content;	// The IP Cloudflare has for the subdomain.
 	}
 
@@ -123,27 +123,36 @@ if ($data->success == true) {
 }
 
 // Create a new record if it doesn't exist.
-if(!$rec_exists){
+if (!$rec_exists) {
 	// Build the request to create a new DNS record.
 	// https://api.cloudflare.com/#dns-records-for-a-zone-create-dns-record
 	$fields = array(
-		'a' => urlencode('rec_new'),
-		'tkn' => urlencode($apiKey),
-		'email' => urlencode($emailAddress),
-		'z' => urlencode($myDomain),
 		'type' => urlencode($type),
-		'name' => urlencode($hostname),
+		'name' => urlencode($ddnsAddress),
 		'content' => urlencode($ip),
 		'ttl' => urlencode ('1')
 	);
+	$url = $baseUrl;
+	
+	$fields_string = json_encode($fields);
 
-	$data = send_request();
+	// Send the request to the CloudFlare API.
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$result = curl_exec($ch);
+	curl_close($ch);
+	
+	$data = json_decode($result);
 	
 	// Print success/error message.
-	if ($data->result == "success") {
+	if ($data->success) {
 		echo $ddnsAddress."/".$type." record successfully created\n";
 	} else {
-		echo $data->msg."\n";
+		print_err_msg();
 	}
 	
 // Only update the entry if the IP addresses do not match.
