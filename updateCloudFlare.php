@@ -34,6 +34,30 @@ $headers = array(
 	"Content-Type: application/json"
 );
 
+// Sends request to CloudFlare and returns the response.
+function send_request($requestType) {
+	global $url, $fields, $headers;
+	
+	$fields_string="";
+	if ($requestType == "POST" || $requestType == "PUT") {
+		$fields_string = json_encode($fields);
+	}
+
+	// Send the request to the CloudFlare API.
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $requestType);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	if ($requestType == "POST" || $requestType == "PUT") {
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+	}
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$result = curl_exec($ch);
+	curl_close($ch);
+
+	return json_decode($result);
+}
+
 // Prints errors and messages and kills the script
 function print_err_msg() {
 	global $data;
@@ -52,7 +76,7 @@ function print_err_msg() {
 }
 
 // Determine protocol version and set record type.
-if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
+if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
 	$type = 'AAAA';
 } else{
 	$type = 'A';
@@ -65,16 +89,7 @@ $baseUrl .= 'zones';
 // https://api.cloudflare.com/#zone-list-zones
 $url = $baseUrl.'?name='.urlencode($myDomain);
 
-// Send the request
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_HTTPGET, true);
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$result = curl_exec($ch);
-curl_close($ch);
-
-$data = json_decode($result);
+$data = send_request("GET");
 
 // Continue if the request succeeded.
 if ($data->success) {
@@ -96,16 +111,7 @@ if ($data->success) {
 $url = $baseUrl.'?type='.$type;
 $url .= '&name='.urlencode($ddnsAddress);
 
-// Send the request
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_HTTPGET, true);
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$result = curl_exec($ch);
-curl_close($ch);
-
-$data = json_decode($result);
+$data = send_request("GET");
 
 // Continue if the request succeeded.
 if ($data->success) {
@@ -133,19 +139,7 @@ if (!$rec_exists) {
 	);
 	$url = $baseUrl;
 	
-	$fields_string = json_encode($fields);
-
-	// Send the request to the CloudFlare API.
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	$result = curl_exec($ch);
-	curl_close($ch);
-	
-	$data = json_decode($result);
+	$data = send_request("POST");
 	
 	// Print success/error message.
 	if ($data->success) {
@@ -155,7 +149,7 @@ if (!$rec_exists) {
 	}
 	
 // Only update the entry if the IP addresses do not match.
-} elseif($ip != $cfIP){
+} elseif ($ip != $cfIP) {
 	// Build the request to update the DNS record with our new IP.
 	// https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 	$fields = array(
@@ -165,19 +159,7 @@ if (!$rec_exists) {
 	);
 	$url = $baseUrl.'/'.$id;
 	
-	$fields_string = json_encode($fields);
-
-	// Send the request to the CloudFlare API.
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	$result = curl_exec($ch);
-	curl_close($ch);
-
-	$data = json_decode($result);
+	$data = send_request("PUT");
 
 	// Print success/error message.
 	if ($data->success) {
