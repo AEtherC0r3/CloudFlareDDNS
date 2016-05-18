@@ -25,7 +25,7 @@ $emailAddress	= "CloudFlareAccountEmailAddress";		// The email address of your C
 $hostname	= $hosts[$_GET['auth']];			// The hostname that will be updated.
 $ddnsAddress	= $hostname.".".$myDomain;			// The fully qualified domain name.
 $ip		= $_SERVER['REMOTE_ADDR'];			// The IP of the client calling the script.
-$baseUrl	= 'https://api.cloudflare.com/client/v4/zones';	// The URL for the CloudFlare API.
+$baseUrl	= 'https://api.cloudflare.com/client/v4/';	// The URL for the CloudFlare API.
 
 // Array with the headers needed for every request
 $headers = array(
@@ -58,6 +58,9 @@ if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 	$type = 'A';
 }
 
+//Update $baseUrl
+$baseUrl .= 'zones';
+
 // Build the request to fetch the zone ID.
 // https://api.cloudflare.com/#zone-list-zones
 $url = $baseUrl.'?name='.urlencode($myDomain);
@@ -75,9 +78,10 @@ $data = json_decode($result);
 
 // Continue if the request succeeded.
 if ($data->success == true) {
-	// Extract the zone ID (if it exists)
+	// Extract the zone ID (if it exists) and update $baseUrl
 	if (!empty($data->result)) {
 		$zoneID = $data->result[0]->id;
+		$baseUrl .= '/'.$zoneID.'/dns_records';
 	} else {
 		die("Zone ".$myDomain." doesn't exist\n");
 	}
@@ -89,8 +93,7 @@ if ($data->success == true) {
 
 // Build the request to fetch the record ID.
 // https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
-$url = $baseUrl.'/'.$zoneID.'dns_records';
-$url .= '?type='.$type;
+$url = $baseUrl.'?type='.$type;
 $url .= '&name='.urlencode($ddnsAddress);
 
 // Send the request
