@@ -27,6 +27,13 @@ $ddnsAddress	= $hostname.".".$myDomain;			// The fully qualified domain name.
 $ip		= $_SERVER['REMOTE_ADDR'];			// The IP of the client calling the script.
 $baseUrl	= 'https://api.cloudflare.com/client/v4/zones';	// The URL for the CloudFlare API.
 
+// Array with the headers needed for every request
+$headers = array(
+	"X-Auth-Email: ".$emailAddress,
+	"X-Auth-Key: ".$apiKey,
+	"Content-Type: application/json"
+);
+
 // Determine protocol version and set record type.
 if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 	$type = 'AAAA';
@@ -34,6 +41,42 @@ if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 	$type = 'A';
 }
 
+// Build the request to fetch the zone ID.
+// https://api.cloudflare.com/#zone-list-zones
+$url = $baseUrl.'?name='.urlencode($myDomain);
+
+//Send the request
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_HTTPGET, true);
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$result = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($result);
+
+// Continue if the request succeeded.
+if ($data->success == true) {
+	// Extract the zone ID (if it exists)
+	if (!empty($data->result)) {
+		$zoneID = $data->result[0]->id;
+	} else {
+		die("Zone ".$myDomain." doesn't exist\n");
+	}
+} else {
+	if (!empty($data->errors)) {
+		echo "Errors:\n";
+		print_r($data->errors);
+		echo "\n";
+	}
+	if (!empty($data->messages)) {
+		echo "Messages:\n";
+		print_r($data->messages);
+		echo "\n";
+	}
+	die();
+}
 
 // Build the request to fetch the record ID.
 // https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
