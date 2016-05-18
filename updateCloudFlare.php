@@ -25,7 +25,7 @@ $emailAddress	= "CloudFlareAccountEmailAddress";		// The email address of your C
 $hostname	= $hosts[$_GET['auth']];			// The hostname that will be updated.
 $ddnsAddress	= $hostname.".".$myDomain;			// The fully qualified domain name.
 $ip		= $_SERVER['REMOTE_ADDR'];			// The IP of the client calling the script.
-$url		= 'https://www.cloudflare.com/api_json.html';	// The URL for the CloudFlare API.
+$baseurl	= 'https://api.cloudflare.com/client/v4/zones';	// The URL for the CloudFlare API.
 
 // Sends request to CloudFlare and returns the response.
 function send_request() {
@@ -55,7 +55,7 @@ if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
 }
 
 // Build the initial request to fetch the record ID.
-// https://www.cloudflare.com/docs/client-api.html#s3.3
+// https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
 $fields = array(
 	'a' => urlencode('rec_load_all'),
 	'tkn' => urlencode($apiKey),
@@ -86,7 +86,7 @@ if ($data->result == "success") {
 // Create a new record if it doesn't exist.
 if(!$rec_exists){
 	// Build the request to create a new DNS record.
-	// https://www.cloudflare.com/docs/client-api.html#s5.1
+	// https://api.cloudflare.com/#dns-records-for-a-zone-create-dns-record
 	$fields = array(
 		'a' => urlencode('rec_new'),
 		'tkn' => urlencode($apiKey),
@@ -110,7 +110,7 @@ if(!$rec_exists){
 // Only update the entry if the IP addresses do not match.
 } elseif($ip != $cfIP){
 	// Build the request to update the DNS record with our new IP.
-	// https://www.cloudflare.com/docs/client-api.html#s5.2
+	// https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 	$fields = array(
 		'a' => urlencode('rec_edit'),
 		'tkn' => urlencode($apiKey),
